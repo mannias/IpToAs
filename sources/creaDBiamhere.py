@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 import MySQLdb as mdb
 import time
 
@@ -10,18 +11,18 @@ con las siguientes tablas, linknodes (red armada conexion de ases tiene columna 
 
 def conectardb():
     db_host = 'localhost'
-    usuario = 'daniel'
-    clave = 't22mo'
-    base_de_datos = 'iamheredb'
+    usuario = 'tix'
+    clave = 'password'
+    base_de_datos = 'iptoas'
     conndb = mdb.connect(host=db_host, user=usuario, passwd=clave, db=base_de_datos)
     cursor = conndb.cursor()
     return cursor, conndb
 
 def conectardbtmp():
     db_host = 'localhost'
-    usuario = 'daniel'
-    clave = 't22mo'
-    base_de_datos = 'iamheredbtmp'
+    usuario = 'tix'
+    clave = 'password'
+    base_de_datos = 'iptoas'
     conndb = mdb.connect(host=db_host, user=usuario, passwd=clave, db=base_de_datos)
     cursor = conndb.cursor()
     return cursor, conndb
@@ -36,7 +37,7 @@ def reddbtmp(nombrered):
     cursor, conndb = conectardb()
 
     cursor.execute('DROP TABLE IF EXISTS linknodestmp;')
-    cursor.execute('CREATE TABLE linknodestmp (link_id int AUTO_INCREMENT, nodeA INT, nodeB INT, frec INT, PRIMARY KEY (link_Id) );')
+    cursor.execute('CREATE TABLE linknodestmp (link_id int AUTO_INCREMENT, nodeA INT, nodeB BIGINT, frec INT, PRIMARY KEY (link_Id) );')
 
     datared = open(nombrered, 'r')
 
@@ -46,7 +47,7 @@ def reddbtmp(nombrered):
             node1 = int(nodos[0].strip())
             node2 = int(nodos[1].strip())
             frec = int(nodos[2].strip())
-            cursor.execute( 'INSERT INTO iamheredb.linknodestmp (nodeA, nodeB, frec) VALUES (%s,%s,%s);', (node1, node2, frec) )
+            cursor.execute( 'INSERT INTO iptoas.linknodestmp (nodeA, nodeB, frec) VALUES (%s,%s,%s);', (node1, node2, frec) )
 
     conndb.commit()
 
@@ -73,8 +74,8 @@ def paisdbtmp(archivopais):
                 nodo = linea[3].strip()
                 pais = linea[1].strip()
                 nic = archivo.split('/')[-1]
-#ON DUPLICATE KEY UPDATE pais=pais, nic=nic
-                cursor.execute( 'INSERT INTO iamheredb.paisnodestmp (nodep, pais, nic) VALUES (%s,%s,%s);', (nodo,pais,nic) )
+#
+                cursor.execute( 'INSERT INTO iptoas.paisnodestmp (nodep, pais, nic) VALUES (%s,%s,%s) ON DUPLICATE KEY UPDATE pais=%s, nic=%s;', (nodo,pais,nic, pais, nic) )
     conndb.commit()
     datapais.close()
 
@@ -97,10 +98,10 @@ def nombreasdbtmp(archivoasn):
         datos = linea.split('\t')
         if len(datos) == 2:
             nodo = datos[0].strip()
-            name = datos[1].strip()
+            name = unicode(datos[1].strip(),'latin-1')
             #print type(name)
-            cursor.execute( 'INSERT INTO iamheredb.namenodestmp (noden, name) VALUES (%s,%s) ON DUPLICATE KEY UPDATE name=name;', (nodo,name) )
-#            cursor.execute( 'INSERT INTO iamheredb.namenodes (noden, name) VALUES (%s,%s);', (nodo,name) )
+            cursor.execute( 'INSERT INTO iptoas.namenodestmp (noden, name) VALUES (%s,%s) ON DUPLICATE KEY UPDATE name=name;', (nodo,name) )
+#            cursor.execute( 'INSERT INTO iptoas.namenodes (noden, name) VALUES (%s,%s);', (nodo,name) )
     conndb.commit()
 
     dataname.close()    
@@ -130,7 +131,7 @@ def reddb():
 #            node1 = int(nodos[0].strip())
 #            node2 = int(nodos[1].strip())
 #            frec = int(nodos[2].strip())
-#            cursor.execute( 'INSERT INTO iamheredb.linknodes (nodeA, nodeB, frec) VALUES (%s,%s,%s);', (node1, node2, frec) )
+#            cursor.execute( 'INSERT INTO iptoas.linknodes (nodeA, nodeB, frec) VALUES (%s,%s,%s);', (node1, node2, frec) )
 
     conndb.commit()
 
@@ -159,7 +160,7 @@ def paisdb():
 #                pais = linea[1].strip()
 #                nic = archivo.split('/')[-1]
 #ON DUPLICATE KEY UPDATE pais=pais, nic=nic
-#                cursor.execute( 'INSERT INTO iamheredb.paisnodes (nodep, pais, nic) VALUES (%s,%s,%s);', (nodo,pais,nic) )
+#                cursor.execute( 'INSERT INTO iptoas.paisnodes (nodep, pais, nic) VALUES (%s,%s,%s);', (nodo,pais,nic) )
     conndb.commit()
 #    datapais.close()
 
@@ -185,8 +186,8 @@ def nombreasdb():
 #            nodo = datos[0].strip()
 #            name = datos[1].strip()
             #print type(name)
-#            cursor.execute( 'INSERT INTO iamheredb.namenodes (noden, name) VALUES (%s,%s) ON DUPLICATE KEY UPDATE name=name;', (nodo,name) )
-#            cursor.execute( 'INSERT INTO iamheredb.namenodes (noden, name) VALUES (%s,%s);', (nodo,name) )
+#            cursor.execute( 'INSERT INTO iptoas.namenodes (noden, name) VALUES (%s,%s) ON DUPLICATE KEY UPDATE name=name;', (nodo,name) )
+#            cursor.execute( 'INSERT INTO iptoas.namenodes (noden, name) VALUES (%s,%s);', (nodo,name) )
     conndb.commit()
 
 #    dataname.close()    
@@ -217,7 +218,7 @@ def nicdb(archivonic, nic):
             hosts = linea[4].strip()
             fecha = linea[5].strip()
             cond = linea[6].strip()
-            cursor.execute( 'INSERT INTO iamheredb.' + nic + ' (pais_' + nic + ', ip_' + nic + ', host_' + nic + ', fecha_' + nic + ', cond_' + nic + ') VALUES (%s,%s,%s,%s,%s);', (pais, ip, hosts, fecha, cond) )
+            cursor.execute( 'INSERT INTO iptoas.' + nic + ' (pais_' + nic + ', ip_' + nic + ', host_' + nic + ', fecha_' + nic + ', cond_' + nic + ') VALUES (%s,%s,%s,%s,%s);', (pais, ip, hosts, fecha, cond) )
     conndb.commit()
     datanic.close()
     cursor.close()
@@ -230,7 +231,7 @@ def routerviewdb(archivorouter):
     cursor, conndb = conectardb()
 
     cursor.execute('DROP TABLE IF EXISTS routerviews;')
-    cursor.execute('CREATE TABLE routerviews (router_id int AUTO_INCREMENT, noderouter INT, ip_router TEXT, mask INT, PRIMARY KEY (router_id) );')
+    cursor.execute('CREATE TABLE routerviews (router_id int AUTO_INCREMENT, noderouter BIGINT, ip_router TEXT, mask INT, PRIMARY KEY (router_id) );')
 
     datarouter = open(archivorouter, 'r')
 
@@ -240,7 +241,7 @@ def routerviewdb(archivorouter):
             ip = datos[0].strip()
             mask = datos[1].strip()
             nodo = datos [2].strip()
-            cursor.execute( 'INSERT INTO iamheredb.routerviews (noderouter, ip_router, mask) VALUES (%s,%s,%s);', (nodo, ip, mask) )
+            cursor.execute( 'INSERT INTO iptoas.routerviews (noderouter, ip_router, mask) VALUES (%s,%s,%s);', (nodo, ip, mask) )
     conndb.commit()
     datarouter.close()    
     cursor.close()

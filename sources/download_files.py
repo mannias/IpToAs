@@ -8,18 +8,20 @@ import datetime
 import shutil
 import urllib2
 from FunIamhere import lista_archivo_server, descarga, descomGZ, descomBZ2, check_md5, parametrosGlobales, comGZ
+import variables
 
 def downloadFiles():
 
+    baseRoot = os.path.abspath(os.path.dirname(__file__)) + '/'
+
     ### DEFINICION DE PARAMETROS GENERALES
-    dicparametros = parametrosGlobales()
-    proxy_ip_port = dicparametros['proxy']
-    logdir = dicparametros['logdir']
-    descargasdir = dicparametros['descargasdir']
+    proxy_ip_port = variables.proxy
+    logdir = baseRoot + variables.logdir
+    descargasdir = baseRoot + variables.descargasdir
     directorioDescargaTemp = descargasdir + 'tmp/'
     
     ### directorio de trabajo
-    dirTrabajo = os.path.abspath(os.path.dirname(__file__))
+
    
     #### guardar fecha actual 
     fechahora = datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
@@ -36,9 +38,7 @@ def downloadFiles():
   
     ### config del proxy si existe
     if proxy_ip_port != '':
-        #print "'http':'http://'" + proxy_ip_port, "'ftp':'http://'" + proxy_ip_port
         proxy_support = urllib2.ProxyHandler({'http':'http://' + proxy_ip_port, 'ftp':'http://' + proxy_ip_port})
-        #proxy_support = urllib2.ProxyHandler({})
         opener = urllib2.build_opener(proxy_support,urllib2.CacheFTPHandler)
         urllib2.install_opener(opener)
 
@@ -55,29 +55,26 @@ def downloadFiles():
     ### Datos routerview, con las ip de los as
     routerviews = 'http://data.caida.org/datasets/routing/routeviews-prefix2as/'+year+'/' #+mes+'/' #recorrer meses
 
-    ### Usuario y Grupo que deben quedar los archivos descargados
-    gid = pwd.getpwnam('www-data').pw_gid
-    uid = pwd.getpwnam('daniel').pw_gid
-
 
     ##### DESCARGA DE ARCHIVOS DE LOS DIFERENTES SERVIDORES
     print "Iniciando descarga"
-    descarga_log = open(logdir + 'i_am_here_download_files.log', 'a')
+
+    descarga_log = open(logdir + 'i_am_here_download_files.log', 'a+')
     print '\ndescarga todos los archivos de los servidores\n'
 
 
     ####### descarga servers ftp afrinic ripe lanic arin apnic
 
 #    try: 
-    print '--------------------------------------------' 
-    for servidor, carpeta in servidores_ftp.items():   
-        print '--------------------------------------------' 
+    print '--------------------------------------------'
+    for servidor, carpeta in servidores_ftp.items():
+        print '--------------------------------------------'
         print 'descargando servidor: ' + servidor + carpeta
         dirs1 = lista_archivo_server(servidor,carpeta,proto='ftp', proxy=proxy_ip_port)
         directorioDescargaFtp = descargasdir + servidor.split('.')[1]+'/'
         for archivo in dirs1:
             if archivo.startswith('delegated-'+servidor.split('.')[1]+'-'+year) or archivo.startswith('delegated-'+servidor.split('.')[1]+'ncc-'+year):
-                if not (archivo.endswith('.asc.gz') or archivo.endswith('.asc') or archivo.endswith('asc.bz2') or archivo.endswith('md5') or archivo.endswith('md5.gz')): 
+                if not (archivo.endswith('.asc.gz') or archivo.endswith('.asc') or archivo.endswith('asc.bz2') or archivo.endswith('md5') or archivo.endswith('md5.gz')):
                     #print directorioDescargaFtp, archivo
                     if not (os.path.isfile(directorioDescargaFtp+archivo) or os.path.isfile(directorioDescargaFtp+archivo[:-4] + '.gz') or os.path.isfile(directorioDescargaFtp+archivo + '.gz')):
                         #print archivo + '\r'
@@ -98,9 +95,9 @@ def downloadFiles():
                                     os.remove(directorioDescargaTemp + archivo)
                                     archivo = nombre + '.gz'
 
-                        else: 
+                        else:
                             nombre = archivo
-                            archivo = archivo + '.gz' 
+                            archivo = archivo + '.gz'
                             if descarga(servidor, carpeta, nombre, directorioDescargaTemp, proto='ftp', proxy=proxy_ip_port):
                                 if descarga(servidor, carpeta, nombre + '.md5', directorioDescargaTemp, proto='ftp', proxy=proxy_ip_port):
                                     comGZ(directorioDescargaTemp + nombre)
@@ -109,9 +106,10 @@ def downloadFiles():
                             verif=check_md5(directorioDescargaTemp + nombre)
                             if verif=='True':
                                 shutil.copy2(directorioDescargaTemp + archivo, directorioDescargaFtp)
-                                if os.path.isfile(directorioDescargaFtp + archivo):
-                                    os.chown(directorioDescargaFtp + archivo, uid, gid)
+                                #if os.path.isfile(directorioDescargaFtp + archivo):
+                                 #   os.chown(directorioDescargaFtp + archivo, uid, gid)
 
+                        print(os.path.isdir(directorioDescargaTemp))
                         if  len(os.listdir(directorioDescargaTemp)) != 0:
                             rmfiles = os.listdir(directorioDescargaTemp)
                             for rmfile in rmfiles:
@@ -131,8 +129,8 @@ def downloadFiles():
                 if not os.path.isfile(directorioDescargaTeam + archivoteam):  
                     descarga(server=servidor, archivo=archivoteam, destino=directorioDescargaTemp, proto='http', proxy=proxy_ip_port)
                     shutil.copy2(directorioDescargaTemp + archivoteam, directorioDescargaTeam)
-                    if os.path.isfile(directorioDescargaTeam + archivoteam):
-                        os.chown(directorioDescargaTeam + archivoteam, uid, gid)
+                    #if os.path.isfile(directorioDescargaTeam + archivoteam):
+                     #   os.chown(directorioDescargaTeam + archivoteam, uid, gid)
                     os.remove(directorioDescargaTemp + archivoteam)
     except:
         descarga_log.write( fechahora + '\t' + servidor[-12:-6] + '--' + ' DOWNLOAD FAIL' + '\n' )
@@ -141,20 +139,20 @@ def downloadFiles():
     ### Descargar asn
     print '--------------------------------------------'
     print 'descarga asn'
-    try:      
+    try:
         directorioDescargaAsn = descargasdir + 'asn/'
         nombre = 'asn' + year + mes + dia
         nombrecomp = nombre + '.gz'
         if not os.path.isfile(directorioDescargaAsn + nombrecomp):
-            descarga(server=asn[:-7], archivo=asn[-7:], destino=directorioDescargaTemp, proto='http', proxy=proxy_ip_port)  
+            descarga(server=asn[:-7], archivo=asn[-7:], destino=directorioDescargaTemp, proto='http', proxy=proxy_ip_port)
             os.rename(directorioDescargaTemp+asn[-7:], directorioDescargaTemp+nombre)
             comGZ(directorioDescargaTemp + nombre)
             shutil.copy2(directorioDescargaTemp + nombrecomp, directorioDescargaAsn)
-            if os.path.isfile(directorioDescargaAsn + nombrecomp):
-                os.chown(directorioDescargaAsn + nombrecomp, uid, gid)
+            #if os.path.isfile(directorioDescargaAsn + nombrecomp):
+            #    os.chown(directorioDescargaAsn + nombrecomp, uid, gid)
             os.remove(directorioDescargaTemp + nombre)
             os.remove(directorioDescargaTemp + nombrecomp)
-      
+
     except:
         descarga_log.write( fechahora + '\t' + '--' + ' asn DOWNLOAD FAIL' + '\n' )
 
@@ -171,8 +169,8 @@ def downloadFiles():
                 if not os.path.isfile(directorioDescargaRV+fileRV):
                     descarga(server=routerviews+directorio, archivo=fileRV, destino=directorioDescargaTemp, proto='http', proxy=proxy_ip_port)
                     shutil.copy2(directorioDescargaTemp+fileRV, directorioDescargaRV)
-                    if os.path.isfile(directorioDescargaRV + fileRV):
-                        os.chown(directorioDescargaRV + fileRV, uid, gid)
+                    #if os.path.isfile(directorioDescargaRV + fileRV):
+                     #   os.chown(directorioDescargaRV + fileRV, uid, gid)
 
                     os.remove(directorioDescargaTemp+fileRV)
     except:

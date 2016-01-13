@@ -11,27 +11,23 @@ from creaDBiamhere import reddb, reddbtmp, paisdb, paisdbtmp, nombreasdb, nombre
 from concatenar_files import *
 from gen_mapas import genmapas
 import backupdb
+import variables
 
 ##########################################
-# Parametros globales ver variables.conf #
+# Parametros globales ver variables.py #
 ##########################################
 dirTrabajo = os.path.abspath(os.path.dirname(__file__)) + '/'
-dicparametros = parametrosGlobales()
-cgi_datos_dir = dicparametros['cgi_datos_dir']
-lanetvidir = dicparametros['lanetvidir']
-lanetvilogdir = dicparametros['lanetvilogdir']
-descargasdir = dicparametros['descargasdir']
-logdir = dicparametros['logdir']
-mapasdir = dicparametros['mapasdir']
-redesdir = dicparametros['redesdir']
+cgi_datos_dir = dirTrabajo + variables.cgi_datos_dir
+lanetvidir = dirTrabajo + variables.lanetvidir
+lanetvilogdir = dirTrabajo + variables.lanetvilogdir
+descargasdir = dirTrabajo + variables.descargasdir
+logdir = dirTrabajo + variables.logdir
+mapasdir = dirTrabajo + variables.mapasdir
+redesdir = dirTrabajo + variables.redesdir
 
 printmpdir = dirTrabajo + 'tmp/'
 redesdir = dirTrabajo + 'redes/'
 listanics = ['afrinic', 'apnic', 'arin', 'lacnic', 'ripe']
-
-### Usuario y Grupo que deben quedar los archivos descargados
-gid = pwd.getpwnam('www-data').pw_gid
-uid = pwd.getpwnam('daniel').pw_gid
 
 ########################
 # guardar fecha actual #
@@ -47,7 +43,7 @@ directorios=('tmp', logdir, 'redes', 'log')
 for indice in directorios:
     if not os.path.exists(indice):
         os.makedirs(indice)
-        os.chown(indice, uid, gid)
+        #os.chown(indice, uid, gid)
 
 
 ##activo log
@@ -56,8 +52,8 @@ log_principal = open(logdir + 'i_am_here_principal.log', "a")
 ###################################
 ### GENERO LOS ARCHIVOS NECESARIOS#
 ###################################
-cantidad = int(dicparametros['dias']) # cantidad de dias que voy a concatenar los archivos
-cgi_datos_dir_tmp = printmpdir + 'cgi_dato_dir_tmp' + str(uid) + '/'
+cantidad = int(variables.dias) # cantidad de dias que voy a concatenar los archivos
+cgi_datos_dir_tmp = printmpdir + 'cgi_dato_dir_tmp' + '/'
 if os.path.isdir(cgi_datos_dir_tmp):
     shutil.rmtree(cgi_datos_dir_tmp)
 os.mkdir(cgi_datos_dir_tmp)
@@ -69,7 +65,7 @@ def concateno():
         listaArchivosnic = selectforlastdays(descargasdir + nic + '/', cantidad, '-', -1)
         dirlistaArchivosnic = str_mas_lista_str(dirTrabajo + 'descargas/' + nic + '/', listaArchivosnic)
         
-        printmpdirnic = printmpdir + nic + str(uid) + '/'
+        printmpdirnic = printmpdir + nic + '/'
         if os.path.isdir(printmpdirnic):
             shutil.rmtree(printmpdirnic, ignore_errors=True)
         os.mkdir(printmpdirnic)    
@@ -98,7 +94,7 @@ def concateno():
     #print listaArchivosASN
     dirlistaArchivosASN = str_mas_lista_str(descargasdir + 'asn/', listaArchivosASN)
 
-    printmpdirAsn = printmpdir + 'Asn' + str(uid) + '/'
+    printmpdirAsn = printmpdir + 'Asn' + '/'
     if os.path.isdir(printmpdirAsn):
         shutil.rmtree(printmpdirAsn, ignore_errors=True)
     os.mkdir(printmpdirAsn)    
@@ -127,7 +123,7 @@ def concateno():
     listaArchivosRouter = selectforlastdays(descargasdir + 'routerviews/', cantidad, '-', -2)
     #print listaArchivosRouter
     dirlistaArchivosRouter = str_mas_lista_str(descargasdir + 'routerviews/', listaArchivosRouter)
-    printmpdirRv = printmpdir + 'Rv' + str(uid) +'/'
+    printmpdirRv = printmpdir + 'Rv'+'/'
     if os.path.isdir(printmpdirRv):
         shutil.rmtree(printmpdirRv, ignore_errors=True)
     os.mkdir(printmpdirRv)    
@@ -156,14 +152,14 @@ concateno()
 ################### 
 namered = 'red_completa'
 nombredelared = redesdir + namered
-printmpdirRedes = printmpdir + 'Redes' + str(uid) + '/'
+printmpdirRedes = printmpdir + 'Redes'  + '/'
 nombredelaredtmp = printmpdirRedes + namered
 
 if os.path.isdir(printmpdirRedes):
     shutil.rmtree(printmpdirRedes, ignore_errors=True)
 os.mkdir(printmpdirRedes)
 
-printmpdirTeam = printmpdir + 'Team' + str(uid) + '/'
+printmpdirTeam = printmpdir + 'Team'  + '/'
 if os.path.isdir(printmpdirTeam):
     shutil.rmtree(printmpdirTeam, ignore_errors=True)
 os.mkdir(printmpdirTeam)    
@@ -201,8 +197,8 @@ def generolared():
         fileredes = os.listdir(printmpdirRedes)
         for filered in fileredes:
             shutil.copy2(printmpdirRedes + filered, redesdir)
-            if os.path.isfile(redesdir + filered):
-                os.chown(redesdir + filered, uid, gid)
+            #if os.path.isfile(redesdir + filered):
+             #   os.chown(redesdir + filered, uid, gid)
         print 'red ' + nombredelared + ' generada'
         return True
     else:
@@ -269,146 +265,16 @@ def generolosnombres():
             texto = nodop + ' ' + pais.decode('latin-1').encode('utf-8') + '\n'
             archnodopais.write(texto)
     archnodopais.close()
-    if os.path.isfile(nombredelared + '-_nodes_Asname.txt'):
-        os.chown(nombredelared + '-_nodes_Asname.txt', uid, gid)
-    if os.path.isfile(nombredelared + '-_nodes_Country.txt'):
-        os.chown(nombredelared + '-_nodes_Country.txt', uid, gid)
+    #if os.path.isfile(nombredelared + '-_nodes_Asname.txt'):
+    #    os.chown(nombredelared + '-_nodes_Asname.txt', uid, gid)
+    #if os.path.isfile(nombredelared + '-_nodes_Country.txt'):
+    #    os.chown(nombredelared + '-_nodes_Country.txt', uid, gid)
    
     print 'nombres de paises para la red completa  generados'
     return True
 
 if isokguardardbtmp:
     isokgenerolosnombres = generolosnombres()
-
-########################################
-# paises disponibles para menu iamhere #
-########################################
-paisesdisptmpdir = printmpdir + 'paisesdisp' + str(uid) + '/'
-if os.path.isdir(paisesdisptmpdir):
-    shutil.rmtree(paisesdisptmpdir)
-os.mkdir(paisesdisptmpdir)
-
-def paisesdisponibles():
-    archpaisesdisponiblesEN = open(paisesdisptmpdir + 'paisesdisponiblesEN.txt', 'w')
-    archpaisesdisponiblesES = open(paisesdisptmpdir + 'paisesdisponiblesES.txt', 'w')
-    lstingles = []
-    lstspanish = []
-
-#    try:
-    seleccionpaisname = selectpaisname('*')
-    for s in seleccionpaisname:
-        busqueda = nodos_x_pais_o_nic(buscapor=s[0])
-        cant = len(busqueda[0])
-        if cant >= 1:
-            codigoletras = s[0]
-            nombreingles = s[1].decode('latin-1').encode('latin-1')
-            nombrespanish = s[2].decode('latin-1').encode('latin-1')
-            lstingles.append(nombreingles + '\t' + codigoletras)
-            lstspanish.append(nombrespanish + '\t' + codigoletras)
-    lstspanish.sort()
-    lstingles.sort()       
-#        print codigoletras, nombreingles, nombrespanish
-    for ingles in lstingles:
-        archpaisesdisponiblesEN.write(ingles.split('\t')[0] + '|' + ingles.split('\t')[1] + '\n')
-
-    for spanish in lstspanish:
-        archpaisesdisponiblesES.write(spanish.split('\t')[0] + '|' + spanish.split('\t')[1] + '\n')
-
-    archpaisesdisponiblesEN.close()
-    archpaisesdisponiblesES.close()
-
-    shutil.copy2(paisesdisptmpdir + 'paisesdisponiblesEN.txt', cgi_datos_dir_tmp)
-    shutil.copy2(paisesdisptmpdir + 'paisesdisponiblesES.txt', cgi_datos_dir_tmp)
-    print 'paises disponibles generados'
-#    return True
-
-#    except:
-#        return False
-#    finally:
-
-    return True
-
-if isokgenerolosnombres:
-    isokpaisesdisp = True
-    #isokpaisesdisp = paisesdisponibles()
-
-
-####################
-# GENERO LOS MAPAS #
-####################
-dirtmplanetvi = dirTrabajo + 'tmp/lanetvi' + str(uid) + '/'
-dirtmpfigures = dirTrabajo + 'tmp/figures' + str(uid) + '/'
-if os.path.isdir(dirtmplanetvi):
-    shutil.rmtree(dirtmplanetvi)
-os.makedirs(dirtmplanetvi)
-if os.path.isdir(dirtmplanetvi + 'log/'):
-    shutil.rmtree(dirtmplanetvi + 'log/')
-os.makedirs(dirtmplanetvi + 'log/')
-if os.path.isdir(dirtmpfigures):
-    shutil.rmtree(dirtmpfigures)
-os.makedirs(dirtmpfigures)
-
-def generarmapas():
-#if genmapas('/var/www/lanet-vi.fi.uba.ar/i_am_here/sources/redes/red_AR', mapasdir, lanetvidir, 'svg'):
-    shutil.copy2(lanetvidir + 'lanet', dirtmplanetvi)
-    shutil.copy2(nombredelaredtmp, dirtmplanetvi)
-    shutil.copy2(nombredelaredtmp + '-_nodes_Country.txt', dirtmplanetvi)
-    shutil.copy2(nombredelaredtmp + '-_nodes_Asname.txt', dirtmplanetvi)
-    shutil.copy2(nombredelaredtmp + '-_frec', dirtmplanetvi)
-
-    if genmapas(namered, dirtmplanetvi, dirtmpfigures, 'svg'):
-        print 'todos los mapas fueron generados'
-#        os.remove(dirtmplanetvi + namered)
-#        os.remove(dirtmplanetvi + namered + '-_nodes_Country.txt')
-#        os.remove(dirtmplanetvi + namered + '-_nodes_Asname.txt')
-#        os.remove(dirtmplanetvi + namered + '-_frec')
-        return True
-
-    else:
-        print 'error al generar los mapas'
-        log_principal.write(fechahora + '\t error genmapas \n')
-        log_principal.close()
-        os.remove(dirtmplanetvi + namered)
-        os.remove(dirtmplanetvi + namered + '-_nodes_Country.txt')
-        os.remove(dirtmplanetvi + namered + '-_nodes_Asname.txt')
-        os.remove(dirtmplanetvi + namered + '-_frec')
-        exit(1)
-
-if isokpaisesdisp:
-#    isokgenerarmapas = True
-    isokgenerarmapas = generarmapas()
-
-
-##################################################
-## copiar figuras y logs al directorio de mapas ##
-##################################################
-def copydatos():
-    archivosmapas = os.listdir(dirtmpfigures)
-#    archivosmapas = 192 * ['1']
-    if len(archivosmapas) == 192: #192 son 96 mapas y 96 log 
-        print 'borrando los mapas viejos'
-        for root, dirs, files in os.walk(mapasdir):
-            for f in files:
-                if not (f == 'globo.png' or f == 'globo_solo.png' or f.startswith('red_completa')):
-                    print os.path.join(root, f)
-                    os.unlink(os.path.join(root, f))
-        for archivo in archivosmapas:
-            if os.path.isfile(dirtmpfigures + archivo):
-                print 'copiando ' + archivo
-                shutil.copy2(dirtmpfigures + archivo, mapasdir)
-                if os.path.isfile(mapasdir + archivo):
-                    os.chown(mapasdir + archivo, uid, gid)
-        lst_arch_cgi = os.listdir(cgi_datos_dir_tmp)                    
-        for archivo_cgi in lst_arch_cgi:
-            print 'copiando ' + archivo_cgi
-            shutil.copy2(cgi_datos_dir_tmp + archivo_cgi, cgi_datos_dir)
-            if os.path.isfile(cgi_datos_dir + archivo_cgi):
-                os.chown(cgi_datos_dir + archivo_cgi, uid, gid)
-    return True                
-
-if isokpaisesdisp: 
-    isokcopydatos = copydatos()
-
 
 def guardardatosendb():
     #####################################
@@ -428,12 +294,12 @@ def guardardatosendb():
     print 'guardando routerviews'
     routerviewdb(cgi_datos_dir_tmp + 'routerviews')
     return True
-if isokcopydatos:
+if isokgenerolosnombres:
     isokguardatendbfinal = guardardatosendb()
 
 #borrar datos viejos
 def borrardatosviejos():
-    datosviejos = [printmpdir, '/var/www/lanet-vi.fi.uba.ar/i_am_here/images/maps/', '/var/www/lanet-vi.fi.uba.ar/i_am_here/i_am_here_cgi/tmp/']
+    datosviejos = [printmpdir, dirTrabajo + 'images/maps/', dirTrabajo + 'tmp/']
     for datoold in datosviejos:
         for root, dirs, files in os.walk(datoold):
             for f in files:
@@ -449,4 +315,4 @@ log_principal.write(fechahora + '\t OK se realizo completo \n')
 log_principal.close()
 
 ### back up db
-backupdb.backupdb()
+#backupdb.backupdb()

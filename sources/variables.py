@@ -5,29 +5,29 @@
 #los directorios especificados deben terminar con el caracter /
 
 #cgi_datos_dir: carpeta cgi donde se gusrdaran los datos que utilizaran los diferentes script
-cgi_datos_dir = /var/www/lanet-vi.fi.uba.ar/i_am_here/i_am_here_cgi/datos/
+cgi_datos_dir = 'datos/'
 
 #redesdir: carpeta donde se guardaran las redes generadas
-redesdir = /var/www/lanet-vi.fi.uba.ar/i_am_here/sources/redes/
+redesdir = 'redes/'
 
 #mapasdir: carpeta donde se guardaran los mapas de i_am_here con diferentes resoluciones, colores, nombres
-mapasdir = /var/www/lanet-vi.fi.uba.ar/i_am_here/i_am_here_cgi/datos/figures/
+mapasdir = 'datos/figures/'
 
 #lanetvidir: carpeta donde esta compilado el soft lanet-vi
-lanetvidir = /var/www/lanet-vi.fi.uba.ar/Soft/LaNet-vi_2.2.3/
+lanetvidir = ''
 
 #lanetvilogdir: carpeta donde se generan los log de lanetvi
 #por defecto se toma lanetvidir/log/
-lanetvilogdir = /var/www/lanet-vi.fi.uba.ar/Soft/LaNet-vi_2.2.3/log/
+lanetvilogdir = 'log/'
 
 #logdir: carpeta donde se generan los log de todo i am here
-logdir = /var/www/lanet-vi.fi.uba.ar/i_am_here/log/
+logdir = 'log/'
 
 #descargasdir: carpeta donde se descargan los diferentes archivos necesarios
-descargasdir = /var/www/lanet-vi.fi.uba.ar/i_am_here/sources/descargas/
+descargasdir = 'descargas/'
 
 # cantidad de dias que se tienen en cuanta para armar la red
-dias = 15
+dias = 30
 
 #si usa proxy indicar ip y puerto en caso contrario dejar vacio, ej proxy = 157.92.49.223:8080
-proxy = proxy.uba.ar:8080
+proxy = ''
