@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import psycopg2 as mbd2
 import MySQLdb as mdb
 import time
 
@@ -9,7 +10,7 @@ la base de datos iamhere debe existir
 con las siguientes tablas, linknodes (red armada conexion de ases tiene columna de id, columna numero as1, columna numero as2) , paisnodes (numero de as y columna con pais y columna con nic, indexar por numero de as)
 '''
 
-def conectardb():
+def connectarDb():
     db_host = 'localhost'
     usuario = 'tix'
     clave = 'password'
@@ -18,7 +19,16 @@ def conectardb():
     cursor = conndb.cursor()
     return cursor, conndb
 
-def conectardbtmp():
+def psqlConnect():
+    hostName = 'localhost'
+    username = 'tix'
+    password = 'password'
+    dbName = 'iptoas'
+    connection = mbd2.connect(dbname=dbName, user=username, host=hostName, password=password)
+    cursor = connection.cursor()
+    return cursor, connection
+
+def psqlConnecttmp():
     db_host = 'localhost'
     usuario = 'tix'
     clave = 'password'
@@ -34,10 +44,10 @@ def reddbtmp(nombrered):
     crea y carga la tabla de enlaces de la red
     '''
 
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
 
     cursor.execute('DROP TABLE IF EXISTS linknodestmp;')
-    cursor.execute('CREATE TABLE linknodestmp (link_id int AUTO_INCREMENT, nodeA INT, nodeB BIGINT, frec INT, PRIMARY KEY (link_Id) );')
+    cursor.execute('CREATE TABLE linknodestmp (link_id SERIAL PRIMARY KEY, nodeA INT, nodeB BIGINT, frec INT);')
 
     datared = open(nombrered, 'r')
 
@@ -47,7 +57,7 @@ def reddbtmp(nombrered):
             node1 = int(nodos[0].strip())
             node2 = int(nodos[1].strip())
             frec = int(nodos[2].strip())
-            cursor.execute( 'INSERT INTO iptoas.linknodestmp (nodeA, nodeB, frec) VALUES (%s,%s,%s);', (node1, node2, frec) )
+            cursor.execute( 'INSERT INTO linknodestmp (nodeA, nodeB, frec) VALUES (%s,%s,%s);', (node1, node2, frec) )
 
     conndb.commit()
 
@@ -61,11 +71,12 @@ def paisdbtmp(archivopais):
     archivodb: lista con los archivo con los paises de los nodos
     crea y carga la tabla de paises de los nodos
     '''
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
 
     cursor.execute('DROP TABLE IF EXISTS paisnodestmp;')
     cursor.execute('CREATE TABLE paisnodestmp (nodep INT, pais CHAR(2), nic TEXT, PRIMARY KEY (nodep) );')
 
+    list = {}
     for archivo in archivopais:
         datapais = open(archivo, 'r')
         for indice in datapais:
@@ -74,8 +85,11 @@ def paisdbtmp(archivopais):
                 nodo = linea[3].strip()
                 pais = linea[1].strip()
                 nic = archivo.split('/')[-1]
-#
-                cursor.execute( 'INSERT INTO iptoas.paisnodestmp (nodep, pais, nic) VALUES (%s,%s,%s) ON DUPLICATE KEY UPDATE pais=%s, nic=%s;', (nodo,pais,nic, pais, nic) )
+                if(nodo in list):
+                    cursor.execute('UPDATE paisnodestmp SET (pais, nic) = (%s, %s) WHERE nodep=%s', (pais, nic, nodo))
+                else:
+                    list[nodo] = True
+                    cursor.execute( 'INSERT INTO paisnodestmp (nodep, pais, nic) VALUES (%s,%s,%s)', (nodo,pais,nic))
     conndb.commit()
     datapais.close()
 
@@ -87,20 +101,24 @@ def nombreasdbtmp(archivoasn):
     archivoasn: archivo con los nombres de los ases
     crea y carga la tabla con los nombres de los nodos
     '''
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
 
     cursor.execute('DROP TABLE IF EXISTS namenodestmp;')
     cursor.execute('CREATE TABLE namenodestmp (noden INT, name TEXT, PRIMARY KEY (noden) );')
 
     dataname = open(archivoasn, 'r')
 
+    list = {}
     for linea in dataname:
         datos = linea.split('\t')
         if len(datos) == 2:
             nodo = datos[0].strip()
             name = unicode(datos[1].strip(),'latin-1')
             #print type(name)
-            cursor.execute( 'INSERT INTO iptoas.namenodestmp (noden, name) VALUES (%s,%s) ON DUPLICATE KEY UPDATE name=name;', (nodo,name) )
+            if(nodo in list):
+                cursor.execute('UPDATE namenodestmp SET (name) = (%s) where noden=%s', (name, nodo))
+            else:
+                cursor.execute( 'INSERT INTO namenodestmp (noden, name) VALUES (%s,%s)', (nodo,name) )
 #            cursor.execute( 'INSERT INTO iptoas.namenodes (noden, name) VALUES (%s,%s);', (nodo,name) )
     conndb.commit()
 
@@ -117,11 +135,11 @@ def reddb():
     crea y carga la tabla de enlaces de la red
     '''
 
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
 
     cursor.execute('DROP TABLE IF EXISTS linknodes;')
 #    cursor.execute('CREATE TABLE linknodes (link_id int AUTO_INCREMENT, nodeA INT, nodeB INT, frec INT, PRIMARY KEY (link_Id) );')
-    cursor.execute('CREATE TABLE linknodes LIKE linknodestmp;')
+    cursor.execute('CREATE TABLE linknodes (LIKE linknodestmp);')
     cursor.execute('INSERT INTO linknodes SELECT * FROM linknodestmp;')
 #    datared = open(nombrered, 'r')
 
@@ -145,11 +163,11 @@ def paisdb():
     archivodb: lista con los archivo con los paises de los nodos
     crea y carga la tabla de paises de los nodos
     '''
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
 
     cursor.execute('DROP TABLE IF EXISTS paisnodes;')
  #   cursor.execute('CREATE TABLE paisnodes (nodep INT, pais CHAR(2), nic TEXT, PRIMARY KEY (nodep) );')
-    cursor.execute('CREATE TABLE paisnodes LIKE paisnodestmp;')
+    cursor.execute('CREATE TABLE paisnodes (LIKE paisnodestmp);')
     cursor.execute('INSERT INTO paisnodes SELECT * FROM paisnodestmp;')
 #    for archivo in archivopais:
 #        datapais = open(archivo, 'r')
@@ -172,11 +190,11 @@ def nombreasdb():
     archivoasn: archivo con los nombres de los ases
     crea y carga la tabla con los nombres de los nodos
     '''
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
 
     cursor.execute('DROP TABLE IF EXISTS namenodes;')
 #    cursor.execute('CREATE TABLE namenodes (noden INT, name TEXT, PRIMARY KEY (noden) );')
-    cursor.execute('CREATE TABLE namenodes LIKE namenodestmp;')
+    cursor.execute('CREATE TABLE namenodes (LIKE namenodestmp);')
     cursor.execute('INSERT INTO namenodes SELECT * FROM namenodestmp;')
 #    dataname = open(archivoasn, 'r')
 
@@ -199,12 +217,12 @@ def nicdb(archivonic, nic):
     archivnic: lista con los archivo de los diferentes nic (afrinic, apnic, arin, lacnic, ripe) que contiene
     los paises asignados por ip. Se crea y carga la tabla de paises ip y cantidad de host por nic
     '''
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
 #    afrinic|ZA|ipv4|198.54.148.0|256|19930505|assigned
 
     if nic in ['afrinic', 'apnic', 'arin', 'lacnic', 'ripe']:
         cursor.execute('DROP TABLE IF EXISTS ' + nic + ';')
-        cursor.execute('CREATE TABLE ' + nic + ' (' + nic + '_id int AUTO_INCREMENT, pais_' + nic + ' CHAR(2), ip_' + nic + ' TEXT, host_' + nic + ' INT, fecha_' + nic + ' INT, cond_' + nic + ' TEXT, PRIMARY KEY (' + nic + '_id) );')
+        cursor.execute('CREATE TABLE ' + nic + ' (' + nic + '_id SERIAL PRIMARY KEY, pais_' + nic + ' CHAR(2), ip_' + nic + ' TEXT, host_' + nic + ' INT, fecha_' + nic + ' INT, cond_' + nic + ' TEXT);')
     else:
         print 'nic no conocido use afrinic, apnic, arin, lacnic, ripe'
         exit(1)
@@ -218,7 +236,7 @@ def nicdb(archivonic, nic):
             hosts = linea[4].strip()
             fecha = linea[5].strip()
             cond = linea[6].strip()
-            cursor.execute( 'INSERT INTO iptoas.' + nic + ' (pais_' + nic + ', ip_' + nic + ', host_' + nic + ', fecha_' + nic + ', cond_' + nic + ') VALUES (%s,%s,%s,%s,%s);', (pais, ip, hosts, fecha, cond) )
+            cursor.execute( 'INSERT INTO ' + nic + ' (pais_' + nic + ', ip_' + nic + ', host_' + nic + ', fecha_' + nic + ', cond_' + nic + ') VALUES (%s,%s,%s,%s,%s);', (pais, ip, hosts, fecha, cond) )
     conndb.commit()
     datanic.close()
     cursor.close()
@@ -228,10 +246,10 @@ def routerviewdb(archivorouter):
     '''
     archivorouter: archivo caida routerviews contiene ip mascara y numero de as
     '''
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
 
     cursor.execute('DROP TABLE IF EXISTS routerviews;')
-    cursor.execute('CREATE TABLE routerviews (router_id int AUTO_INCREMENT, noderouter BIGINT, ip_router TEXT, mask INT, PRIMARY KEY (router_id) );')
+    cursor.execute('CREATE TABLE routerviews (router_id SERIAL PRIMARY KEY, noderouter BIGINT, ip_router TEXT, mask INT);')
 
     datarouter = open(archivorouter, 'r')
 
@@ -241,7 +259,7 @@ def routerviewdb(archivorouter):
             ip = datos[0].strip()
             mask = datos[1].strip()
             nodo = datos [2].strip()
-            cursor.execute( 'INSERT INTO iptoas.routerviews (noderouter, ip_router, mask) VALUES (%s,%s,%s);', (nodo, ip, mask) )
+            cursor.execute( 'INSERT INTO routerviews (noderouter, ip_router, mask) VALUES (%s,%s,%s);', (nodo, ip, mask) )
     conndb.commit()
     datarouter.close()    
     cursor.close()
@@ -253,7 +271,7 @@ def findlistanodos():
     '''
     devuelve una lista de los nodos que componen la red completa    
     '''
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
     cursor.execute('SELECT nodeA FROM linknodes UNION SELECT nodeB FROM linknodes ORDER by nodeA;')
     resultado=cursor.fetchall()
     cursor.close()
@@ -267,8 +285,8 @@ def findnodosname():
     '''
     busca los nombres de los nodos de la red completa si no tiene nombre pone un string vacio
     '''
-    cursor, conndb = conectardb()
-    sql = 'SELECT nodeA, IFNULL(name,"") AS name FROM (SELECT nodeA FROM linknodestmp UNION SELECT nodeB FROM linknodestmp) AS nodealias LEFT JOIN namenodestmp ON noden=nodeA ORDER BY nodeA;'
+    cursor, conndb = psqlConnect()
+    sql = "SELECT nodeA, COALESCE(name,'') AS name FROM (SELECT nodeA FROM linknodestmp UNION SELECT nodeB FROM linknodestmp) AS nodealias LEFT JOIN namenodestmp ON noden=nodeA ORDER BY nodeA;"
 
     cursor.execute(sql)
     resultado=cursor.fetchall()
@@ -287,8 +305,8 @@ def findnodospais():
     '''
     busca los paises de los nodos de la red completa
     '''
-    cursor, conndb = conectardb()
-    sql = 'SELECT nodeA, IFNULL(pais,"") FROM (SELECT nodeA FROM linknodestmp UNION SELECT nodeB FROM linknodestmp) AS nodealias LEFT JOIN paisnodestmp ON nodep=nodeA GROUP BY nodeA;'
+    cursor, conndb = psqlConnect()
+    sql = "SELECT nodeA, COALESCE(pais,'') FROM (SELECT nodeA FROM linknodestmp UNION SELECT nodeB FROM linknodestmp) AS nodealias LEFT JOIN paisnodestmp ON nodep=nodeA GROUP BY nodeA, pais;"
 
     cursor.execute(sql)
     resultado=cursor.fetchall()
@@ -307,7 +325,7 @@ def nodos_x_pais_o_nic(buscapor=''):
     devuelve lista de nodos por pais o por nic (afrinic, apnic, arin, lacnic, ripe) si es vacio devuelve todos
     '''
 
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
     if buscapor in ['afrinic', 'apnic', 'arin', 'lacnic', 'ripe']:
 
         ### devuelve tabla de enlaces de nodos a partir de la red completa donde ambos nodos perteneces al pais elejido
@@ -317,7 +335,7 @@ def nodos_x_pais_o_nic(buscapor=''):
         sqlpaises = 'SELECT nodeA AS node, pais, nic FROM (SELECT nodeA FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '")) AS redpais1 UNION SELECT nodeB FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '")) AS redpais2) AS listapais INNER JOIN paisnodes ON nodep=listapais.nodeA ORDER BY node;'
 
         ###devuelve los nombres de los nodos de la red perteneciente al pais elegido si hay un nodo del pais que no tiene nombre devuelve un string vacio como nombre,
-        sqlnombres = 'SELECT nodeA AS node, IFNULL(name,"") AS nombre FROM (SELECT nodeA FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '")) AS redpais1 UNION SELECT nodeB FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '")) AS redpais2) AS listapais LEFT JOIN namenodes ON noden=listapais.nodeA ORDER BY node;'
+        sqlnombres = 'SELECT nodeA AS node, COALESCE(name,"") AS nombre FROM (SELECT nodeA FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '")) AS redpais1 UNION SELECT nodeB FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE nic="' + buscapor + '")) AS redpais2) AS listapais LEFT JOIN namenodes ON noden=listapais.nodeA ORDER BY node;'
 
         
     else:
@@ -328,7 +346,7 @@ def nodos_x_pais_o_nic(buscapor=''):
         sqlpaises = 'SELECT nodeA AS node, pais, nic FROM (SELECT nodeA FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '")) AS redpais1 UNION SELECT nodeB FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '")) AS redpais2) AS listapais INNER JOIN paisnodes ON nodep=listapais.nodeA ORDER BY node;'
 
         ###devuelve los nombres de los nodos de la red perteneciente al pais elegido si hay un nodo del pais que no tiene nombre devuelve un string vacio como nombre,
-        sqlnombres = 'SELECT nodeA AS node, IFNULL(name,"") AS nombre FROM (SELECT nodeA FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '")) AS redpais1 UNION SELECT nodeB FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '")) AS redpais2) AS listapais LEFT JOIN namenodes ON noden=listapais.nodeA ORDER BY node;'
+        sqlnombres = 'SELECT nodeA AS node, COALESCE(name,"") AS nombre FROM (SELECT nodeA FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '")) AS redpais1 UNION SELECT nodeB FROM (SELECT nodeA, nodeB, frec FROM linknodes WHERE nodeA IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '") AND nodeB IN (SELECT nodep FROM paisnodes WHERE pais="' + buscapor + '")) AS redpais2) AS listapais LEFT JOIN namenodes ON noden=listapais.nodeA ORDER BY node;'
 
     cursor.execute(sqlred)
     resultadored=cursor.fetchall()
@@ -375,7 +393,7 @@ def selectpaisname(codigopais):
     devuelve el nombre del pais a partir del codigo de 2 letras en ingles y spanish  
 
     '''
-    cursor, conndb = conectardb()
+    cursor, conndb = psqlConnect()
     if codigopais != '*':
         cursor.execute('SELECT alpha2, langEN, langES, FROM countries WHERE alpha2 = "' + codigopais + '" GROUP BY alpha2 ;')
     else:
